@@ -1,4 +1,6 @@
-use rustyline::{Editor, error::ReadlineError, history::DefaultHistory};
+#![warn(clippy::pedantic)]
+
+use rustyline::{Editor, history::DefaultHistory};
 use std::cell::RefCell;
 
 thread_local! {
@@ -20,6 +22,7 @@ impl Drop for Wrapper {
     }
 }
 
+#[must_use]
 pub fn readline(prompt: &str) -> Option<String> {
     EDITOR.with_borrow_mut(|wrapper| match wrapper.editor.readline(prompt) {
         Ok(line) => {
@@ -29,8 +32,6 @@ pub fn readline(prompt: &str) -> Option<String> {
             }
             Some(line.to_string())
         }
-        Err(ReadlineError::Eof) => None,
-        Err(ReadlineError::Interrupted) => None,
-        Err(_) => panic!("unrecoverable error reading input"),
+        Err(_) => None,
     })
 }
