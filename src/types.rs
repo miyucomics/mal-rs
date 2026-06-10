@@ -1,7 +1,7 @@
 #![warn(clippy::pedantic)]
 #![allow(unpredictable_function_pointer_comparisons)]
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, rc::Rc};
 
 pub type MalFn = fn(&[Atom]) -> Result<Atom, String>;
 
@@ -10,11 +10,11 @@ pub enum Atom {
     Nil,
     Bool(bool),
     Int(i32),
-    Keyword(String),
-    Str(String),
-    Symbol(String),
-    List(Vec<Atom>),
-    Vector(Vec<Atom>),
-    Map(BTreeMap<Atom, Atom>),
+    Keyword(Rc<str>),
+    Str(Rc<str>),
+    Symbol(Rc<str>),
+    List(Rc<[Atom]>),
+    Vector(Rc<[Atom]>),
+    Map(Rc<BTreeMap<Atom, Atom>>),
     Function(MalFn),
 }

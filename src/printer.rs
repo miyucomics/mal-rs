@@ -22,11 +22,11 @@ pub fn print_str(atom: &Atom, print_readably: bool) -> String {
                     .replace('\n', "\\n")
                     .replace('"', "\\\"")
             } else {
-                string.clone()
+                string.to_string()
             };
             format!("\"{string}\"")
         }
-        Atom::Symbol(value) => value.clone(),
+        Atom::Symbol(value) => value.to_string(),
         Atom::List(contents) => {
             let inner = contents
                 .iter()

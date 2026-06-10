@@ -4,6 +4,7 @@ use core::fmt;
 use std::{
     collections::BTreeMap,
     fmt::{Display, Formatter},
+    rc::Rc,
 };
 
 use crate::types::Atom;
@@ -166,25 +167,25 @@ fn read_with_meta(reader: &mut Reader) -> Result<Atom, ReadError> {
     reader.next();
     let meta = read_form(reader)?;
     let value = read_form(reader)?;
-    Ok(Atom::List(vec![
-        Atom::Symbol("with-meta".to_string()),
+    Ok(Atom::List(Rc::from([
+        Atom::Symbol(Rc::from("with-meta")),
         value,
         meta,
-    ]))
+    ])))
 }
 
 fn read_quotelike(reader: &mut Reader, name: &str) -> Result<Atom, ReadError> {
     reader.next();
     let inner = read_form(reader)?;
-    Ok(Atom::List(vec![Atom::Symbol(name.to_string()), inner]))
+    Ok(Atom::List(Rc::from([Atom::Symbol(Rc::from(name)), inner])))
 }
 
 fn read_list(reader: &mut Reader) -> Result<Atom, ReadError> {
-    Ok(Atom::List(read_sequence(reader, ")")?))
+    Ok(Atom::List(Rc::from(read_sequence(reader, ")")?)))
 }
 
 fn read_vector(reader: &mut Reader) -> Result<Atom, ReadError> {
-    Ok(Atom::Vector(read_sequence(reader, "]")?))
+    Ok(Atom::Vector(Rc::from(read_sequence(reader, "]")?)))
 }
 
 fn read_map(reader: &mut Reader) -> Result<Atom, ReadError> {
@@ -194,7 +195,7 @@ fn read_map(reader: &mut Reader) -> Result<Atom, ReadError> {
         match reader.peek().ok_or(ReadError::UnexpectedEof)? {
             "}" => {
                 reader.next();
-                return Ok(Atom::Map(map));
+                return Ok(Atom::Map(Rc::from(map)));
             }
             _ => map.insert(read_form(reader)?, read_form(reader)?),
         };
@@ -222,10 +223,10 @@ fn read_atom(reader: &mut Reader) -> Result<Atom, ReadError> {
         "true" => Ok(Atom::Bool(true)),
         "false" => Ok(Atom::Bool(false)),
         token if token.starts_with('"') && token.ends_with('"') => {
-            Ok(Atom::Str(token[1..token.len() - 1].to_string()))
+            Ok(Atom::Str(Rc::from(&token[1..token.len() - 1])))
         }
-        token if token.starts_with(':') => Ok(Atom::Keyword(token[1..].to_string())),
+        token if token.starts_with(':') => Ok(Atom::Keyword(Rc::from(&token[1..]))),
         token if let Ok(n) = token.parse::<i32>() => Ok(Atom::Int(n)),
-        token => Ok(Atom::Symbol(token.to_string())),
+        token => Ok(Atom::Symbol(Rc::from(token))),
     }
 }
