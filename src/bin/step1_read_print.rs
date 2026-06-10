@@ -16,7 +16,7 @@ fn eval(input: Atom) -> Atom {
 }
 
 fn print(input: &Atom) -> String {
-    print_str(input)
+    print_str(input, true)
 }
 
 fn rep(input: &str) -> Result<String, ReadError> {

@@ -2,7 +2,7 @@
 
 use crate::types::Atom;
 
-pub fn print_str(atom: &Atom) -> String {
+pub fn print_str(atom: &Atom, print_readably: bool) -> String {
     match atom {
         Atom::Nil => "nil".to_string(),
         Atom::Bool(value) => {
@@ -15,17 +15,21 @@ pub fn print_str(atom: &Atom) -> String {
         Atom::Integer(value) => value.to_string(),
         Atom::Keyword(name) => format!(":{name}"),
         Atom::String(string) => {
-            let new = string
-                .replace('\\', "\\\\")
-                .replace('\n', "\\n")
-                .replace('"', "\\\"");
-            format!("\"{new}\"")
+            let string = if print_readably {
+                string
+                    .replace('\\', "\\\\")
+                    .replace('\n', "\\n")
+                    .replace('"', "\\\"")
+            } else {
+                string.clone()
+            };
+            format!("\"{string}\"")
         }
         Atom::Symbol(value) => value.clone(),
         Atom::List(contents) => {
             let inner = contents
                 .iter()
-                .map(print_str)
+                .map(|x| print_str(x, print_readably))
                 .collect::<Vec<String>>()
                 .join(" ");
             format!("({inner})")
@@ -33,7 +37,7 @@ pub fn print_str(atom: &Atom) -> String {
         Atom::Vector(contents) => {
             let inner = contents
                 .iter()
-                .map(print_str)
+                .map(|x| print_str(x, print_readably))
                 .collect::<Vec<String>>()
                 .join(" ");
             format!("[{inner}]")
@@ -41,7 +45,13 @@ pub fn print_str(atom: &Atom) -> String {
         Atom::Map(map) => {
             let contents = map
                 .iter()
-                .map(|(key, value)| format!("{} {}", print_str(key), print_str(value)))
+                .map(|(key, value)| {
+                    format!(
+                        "{} {}",
+                        print_str(key, print_readably),
+                        print_str(value, print_readably)
+                    )
+                })
                 .collect::<Vec<String>>()
                 .join(" ");
             format!("{{{contents}}}").to_string()
