@@ -222,10 +222,10 @@ fn read_atom(reader: &mut Reader) -> Result<Atom, ReadError> {
         "true" => Ok(Atom::Bool(true)),
         "false" => Ok(Atom::Bool(false)),
         token if token.starts_with('"') && token.ends_with('"') => {
-            Ok(Atom::String(token[1..token.len() - 1].to_string()))
+            Ok(Atom::Str(token[1..token.len() - 1].to_string()))
         }
         token if token.starts_with(':') => Ok(Atom::Keyword(token[1..].to_string())),
-        token if let Ok(n) = token.parse::<i64>() => Ok(Atom::Integer(n)),
+        token if let Ok(n) = token.parse::<i32>() => Ok(Atom::Int(n)),
         token => Ok(Atom::Symbol(token.to_string())),
     }
 }

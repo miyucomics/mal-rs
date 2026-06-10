@@ -2,6 +2,7 @@
 
 use crate::types::Atom;
 
+#[must_use]
 pub fn print_str(atom: &Atom, print_readably: bool) -> String {
     match atom {
         Atom::Nil => "nil".to_string(),
@@ -12,9 +13,9 @@ pub fn print_str(atom: &Atom, print_readably: bool) -> String {
                 "false".to_string()
             }
         }
-        Atom::Integer(value) => value.to_string(),
+        Atom::Int(value) => value.to_string(),
         Atom::Keyword(name) => format!(":{name}"),
-        Atom::String(string) => {
+        Atom::Str(string) => {
             let string = if print_readably {
                 string
                     .replace('\\', "\\\\")
@@ -56,5 +57,6 @@ pub fn print_str(atom: &Atom, print_readably: bool) -> String {
                 .join(" ");
             format!("{{{contents}}}").to_string()
         }
+        Atom::Function(_) => "#<function>".to_string(),
     }
 }
