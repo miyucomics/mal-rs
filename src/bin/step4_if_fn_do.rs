@@ -93,6 +93,29 @@ fn special_if(atoms: &[Atom], env: &EnvRef) -> Result<Atom, String> {
     }
 }
 
+fn special_fn(atoms: &[Atom], env: &EnvRef) -> Result<Atom, String> {
+    if let Some(Atom::List(raw_params) | Atom::Vector(raw_params)) = atoms.first() {
+        let params: Rc<[Rc<str>]> = raw_params
+            .iter()
+            .map(|a| match a {
+                Atom::Symbol(s) => Ok(Rc::clone(s)),
+                _ => Err("fn* parameters must be symbols".to_string()),
+            })
+            .collect::<Result<Vec<_>, _>>()?
+            .into();
+
+        let body = atoms.get(1).ok_or("fn* requires a body")?.clone();
+
+        Ok(Atom::Lambda {
+            params,
+            body: Box::new(body),
+            env: Rc::clone(env),
+        })
+    } else {
+        Err("fn* requires a parameter list".to_string())
+    }
+}
+
 fn eval(input: Atom, env: &EnvRef) -> Result<Atom, String> {
     if let Some(debug_val) = Env::get(env, "DEBUG-EVAL") {
         match debug_val {
@@ -116,6 +139,7 @@ fn eval(input: Atom, env: &EnvRef) -> Result<Atom, String> {
                     "let*" => return special_let(&atoms[1..], env),
                     "do" => return special_do(&atoms[1..], env),
                     "if" => return special_if(&atoms[1..], env),
+                    "fn*" => return special_fn(&atoms[1..], env),
                     _ => {}
                 }
             }
@@ -131,6 +155,20 @@ fn eval(input: Atom, env: &EnvRef) -> Result<Atom, String> {
 
             match first {
                 Atom::Function(func) => func(&remaining),
+                Atom::Lambda {
+                    params,
+                    body,
+                    env: closed_env,
+                } => {
+                    let fn_env = Env::new(Some(Rc::clone(&closed_env)));
+                    if remaining.len() < params.len() {
+                        return Err("did not give enough arguments".to_string());
+                    }
+                    for (name, value) in params.iter().zip(remaining.iter()) {
+                        fn_env.borrow_mut().set(name, value.clone());
+                    }
+                    eval(*body.clone(), &fn_env)
+                }
                 _ => Err("first element in a list must be a function".to_string()),
             }
         }

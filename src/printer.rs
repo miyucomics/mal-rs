@@ -57,6 +57,6 @@ pub fn print_str(atom: &Atom, print_readably: bool) -> String {
                 .join(" ");
             format!("{{{contents}}}").to_string()
         }
-        Atom::Function(_) => "#<function>".to_string(),
+        Atom::Function(_) | Atom::Lambda { .. } => "#<function>".to_string(),
     }
 }
