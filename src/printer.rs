@@ -16,15 +16,15 @@ pub fn print_str(atom: &Atom, print_readably: bool) -> String {
         Atom::Int(value) => value.to_string(),
         Atom::Keyword(name) => format!(":{name}"),
         Atom::Str(string) => {
-            let string = if print_readably {
-                string
+            if print_readably {
+                let string = string
                     .replace('\\', "\\\\")
                     .replace('\n', "\\n")
-                    .replace('"', "\\\"")
+                    .replace('"', "\\\"");
+                format!("\"{string}\"")
             } else {
                 string.to_string()
-            };
-            format!("\"{string}\"")
+            }
         }
         Atom::Symbol(value) => value.to_string(),
         Atom::List(contents) => {

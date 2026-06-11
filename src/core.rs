@@ -32,14 +32,6 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
     lib.push(("*", two_int_op!("*", |a, b| Atom::Int(a * b))));
     lib.push(("/", two_int_op!("/", |a, b| Atom::Int(a / b))));
 
-    lib.push((
-        "prn",
-        func(|atoms| {
-            let first = atoms.first().ok_or("prn needs an argument to print")?;
-            println!("{}", print_str(first, true));
-            Ok(Atom::Nil)
-        }),
-    ));
     lib.push(("list", func(|atoms| Ok(Atom::List(Rc::from(atoms))))));
     lib.push(("list?", func(is_type_op!(Atom::List(_)))));
     lib.push((
@@ -71,6 +63,54 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
     lib.push(("<=", two_int_op!("<=", |a, b| Atom::Bool(a <= b))));
     lib.push((">", two_int_op!(">", |a, b| Atom::Bool(a > b))));
     lib.push((">=", two_int_op!(">=", |a, b| Atom::Bool(a >= b))));
+    lib.push((
+        "pr-str",
+        func(|atoms| {
+            Ok(Atom::Str(Rc::from(
+                atoms
+                    .iter()
+                    .map(|x| print_str(x, true))
+                    .collect::<Vec<String>>()
+                    .join(" "),
+            )))
+        }),
+    ));
+    lib.push((
+        "str",
+        func(|atoms| {
+            Ok(Atom::Str(Rc::from(
+                atoms
+                    .iter()
+                    .map(|x| print_str(x, false))
+                    .collect::<Vec<String>>()
+                    .join(""),
+            )))
+        }),
+    ));
+    lib.push((
+        "prn",
+        func(|atoms| {
+            let output = atoms
+                .iter()
+                .map(|x| print_str(x, true))
+                .collect::<Vec<String>>()
+                .join(" ");
+            println!("{}", output);
+            Ok(Atom::Nil)
+        }),
+    ));
+    lib.push((
+        "println",
+        func(|atoms| {
+            let output = atoms
+                .iter()
+                .map(|x| print_str(x, false))
+                .collect::<Vec<String>>()
+                .join(" ");
+            println!("{}", output);
+            Ok(Atom::Nil)
+        }),
+    ));
 
     lib
 }
