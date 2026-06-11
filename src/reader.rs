@@ -35,16 +35,19 @@ impl Reader {
 #[derive(Debug)]
 pub enum ReadError {
     UnexpectedEof,
-    UnexpectedToken(String),
     InvalidEscape(String),
+    InvalidMapKey(String),
 }
 
 impl Display for ReadError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnexpectedEof => write!(formatter, "EOF"),
-            Self::UnexpectedToken(token) => write!(formatter, "unexpected token: {token}"),
             Self::InvalidEscape(ch) => write!(formatter, "invalid escape: {ch}"),
+            Self::InvalidMapKey(token) => write!(
+                formatter,
+                "invalid map key {token}, only strings and keywords can be map keys"
+            ),
         }
     }
 }
@@ -197,7 +200,7 @@ fn read_map(reader: &mut Reader) -> Result<Atom, ReadError> {
                 reader.next();
                 return Ok(Atom::Map(Rc::from(map)));
             }
-            _ => map.insert(read_form(reader)?, read_form(reader)?),
+            _ => map.insert(read_map_key(reader)?, read_form(reader)?),
         };
     }
 }
@@ -228,5 +231,24 @@ fn read_atom(reader: &mut Reader) -> Result<Atom, ReadError> {
         token if token.starts_with(':') => Ok(Atom::Keyword(Rc::from(&token[1..]))),
         token if let Ok(n) = token.parse::<i32>() => Ok(Atom::Int(n)),
         token => Ok(Atom::Symbol(Rc::from(token))),
+    }
+}
+
+fn read_map_key(reader: &mut Reader) -> Result<String, ReadError> {
+    let token = reader.next().ok_or(ReadError::UnexpectedEof)?;
+    match token {
+        token if token.starts_with('"') && token.ends_with('"') => {
+            Ok(token[1..token.len() - 1].to_string())
+        }
+        token if token.starts_with(':') => Ok(format!("\u{29e}{}", &token[1..])),
+        _ => Err(ReadError::InvalidMapKey(token.to_string())),
+    }
+}
+
+#[must_use]
+pub fn unwrap_map_key(s: &str) -> Atom {
+    match s.strip_prefix('\u{29e}') {
+        Some(keyword) => Atom::Keyword(Rc::from(keyword)),
+        None => Atom::Str(Rc::from(s)),
     }
 }

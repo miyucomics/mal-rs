@@ -15,6 +15,6 @@ pub enum Atom {
     Symbol(Rc<str>),
     List(Rc<[Atom]>),
     Vector(Rc<[Atom]>),
-    Map(Rc<BTreeMap<Atom, Atom>>),
+    Map(Rc<BTreeMap<String, Atom>>),
     Function(MalFn),
 }

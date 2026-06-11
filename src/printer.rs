@@ -1,6 +1,6 @@
 #![warn(clippy::pedantic)]
 
-use crate::types::Atom;
+use crate::{reader::unwrap_map_key, types::Atom};
 
 #[must_use]
 pub fn print_str(atom: &Atom, print_readably: bool) -> String {
@@ -49,7 +49,7 @@ pub fn print_str(atom: &Atom, print_readably: bool) -> String {
                 .map(|(key, value)| {
                     format!(
                         "{} {}",
-                        print_str(key, print_readably),
+                        print_str(&unwrap_map_key(key), print_readably),
                         print_str(value, print_readably)
                     )
                 })
