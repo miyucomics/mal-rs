@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic)]
+
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::types::Atom;
@@ -10,6 +12,7 @@ pub struct Env {
 }
 
 impl Env {
+    #[must_use]
     pub fn new(outer: Option<EnvRef>) -> EnvRef {
         Rc::new(RefCell::new(Env {
             outer,
@@ -17,6 +20,7 @@ impl Env {
         }))
     }
 
+    #[must_use]
     pub fn new_with_binds(outer: Option<EnvRef>, binds: &[Rc<str>], exprs: &[Atom]) -> EnvRef {
         let env = Rc::new(RefCell::new(Env {
             outer,

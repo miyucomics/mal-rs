@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic)]
+
 use std::rc::Rc;
 
 use crate::{
@@ -37,8 +39,7 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
     lib.push((
         "empty?",
         func(|atoms| match atoms.first().ok_or("empty? needs a list")? {
-            Atom::List(list) => Ok(Atom::Bool(list.is_empty())),
-            Atom::Vector(list) => Ok(Atom::Bool(list.is_empty())),
+            Atom::List(list) | Atom::Vector(list) => Ok(Atom::Bool(list.is_empty())),
             _ => Err("empty? needs a list".to_string()),
         }),
     ));
@@ -46,8 +47,9 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
         "count",
         func(
             |atoms| match atoms.first().ok_or("count needs an argument")? {
-                Atom::List(list) => Ok(Atom::Int(list.len() as i32)),
-                Atom::Vector(list) => Ok(Atom::Int(list.len() as i32)),
+                Atom::List(list) | Atom::Vector(list) => Ok(Atom::Int(
+                    i32::try_from(list.len()).expect("List overflow?"),
+                )),
                 _ => Ok(Atom::Int(0)), // for some reason, MAL wants us to return 0 even if it's nil
             },
         ),
@@ -83,8 +85,7 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
                 atoms
                     .iter()
                     .map(|x| print_str(x, false))
-                    .collect::<Vec<String>>()
-                    .join(""),
+                    .collect::<String>(),
             )))
         }),
     ));
@@ -96,7 +97,7 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
                 .map(|x| print_str(x, true))
                 .collect::<Vec<String>>()
                 .join(" ");
-            println!("{}", output);
+            println!("{output}");
             Ok(Atom::Nil)
         }),
     ));
@@ -108,7 +109,7 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
                 .map(|x| print_str(x, false))
                 .collect::<Vec<String>>()
                 .join(" ");
-            println!("{}", output);
+            println!("{output}");
             Ok(Atom::Nil)
         }),
     ));
@@ -116,6 +117,7 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
     lib
 }
 
+#[must_use]
 pub fn construct_repl_env() -> EnvRef {
     let repl_env: EnvRef = Env::new(None);
     {
