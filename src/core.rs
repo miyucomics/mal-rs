@@ -38,6 +38,7 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
         "empty?",
         func(|atoms| match atoms.first().ok_or("empty? needs a list")? {
             Atom::List(list) => Ok(Atom::Bool(list.is_empty())),
+            Atom::Vector(list) => Ok(Atom::Bool(list.is_empty())),
             _ => Err("empty? needs a list".to_string()),
         }),
     ));

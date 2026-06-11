@@ -55,7 +55,7 @@ impl PartialEq for Atom {
             (Atom::Keyword(a), Atom::Keyword(b))
             | (Atom::Str(a), Atom::Str(b))
             | (Atom::Symbol(a), Atom::Symbol(b)) => a == b,
-            (Atom::List(a), Atom::List(b)) | (Atom::Vector(a), Atom::Vector(b)) => a == b,
+            (Atom::List(a) | Atom::Vector(a), Atom::List(b) | Atom::Vector(b)) => a == b,
             (Atom::Map(a), Atom::Map(b)) => a == b,
 
             // functions and lambdas are never equal
