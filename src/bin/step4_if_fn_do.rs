@@ -3,6 +3,7 @@
 use std::{collections::BTreeMap, rc::Rc};
 
 use mal::{
+    core::construct_repl_env,
     env::{Env, EnvRef},
     printer::print_str,
     reader::{ReadError, read_str},
@@ -201,43 +202,7 @@ fn rep(input: &str, env: &EnvRef) -> Result<String, String> {
 }
 
 fn main() {
-    let repl_env: EnvRef = Env::new(None);
-
-    {
-        let mut env = repl_env.borrow_mut();
-
-        env.set(
-            "+",
-            Atom::Function(|args| match args {
-                [Atom::Int(a), Atom::Int(b)] => Ok(Atom::Int(a + b)),
-                _ => Err("improper arguments for '+'".to_string()),
-            }),
-        );
-
-        env.set(
-            "-",
-            Atom::Function(|args| match args {
-                [Atom::Int(a), Atom::Int(b)] => Ok(Atom::Int(a - b)),
-                _ => Err("improper arguments for '-'".to_string()),
-            }),
-        );
-
-        env.set(
-            "*",
-            Atom::Function(|args| match args {
-                [Atom::Int(a), Atom::Int(b)] => Ok(Atom::Int(a * b)),
-                _ => Err("improper arguments for '*'".to_string()),
-            }),
-        );
-
-        env.set(
-            "/",
-            Atom::Function(|args| match args {
-                [Atom::Int(a), Atom::Int(b)] => Ok(Atom::Int(a / b)),
-                _ => Err("improper arguments for '/'".to_string()),
-            }),
-        );
-    }
+    let repl_env = construct_repl_env();
 
     while let Some(ref line) = readline("user> ") {
         if !line.is_empty() {
