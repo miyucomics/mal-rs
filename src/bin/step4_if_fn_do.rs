@@ -198,6 +198,7 @@ fn rep(input: &str, env: &EnvRef) -> Result<String, String> {
 
 fn main() {
     let repl_env = construct_repl_env();
+    let _ = rep("(def! not (fn* (a) (if a false true)))", &repl_env);
 
     while let Some(ref line) = readline("user> ") {
         if !line.is_empty() {
