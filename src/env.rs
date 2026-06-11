@@ -17,6 +17,25 @@ impl Env {
         }))
     }
 
+    pub fn new_with_binds(outer: Option<EnvRef>, binds: &[Rc<str>], exprs: &[Atom]) -> EnvRef {
+        let env = Rc::new(RefCell::new(Env {
+            outer,
+            data: HashMap::new(),
+        }));
+
+        for (i, bind) in binds.iter().enumerate() {
+            if bind.as_ref() == "&" {
+                let rest_name = &binds[i + 1];
+                let rest = Atom::List(Rc::from(&exprs[i..]));
+                env.borrow_mut().set(rest_name, rest);
+                break;
+            }
+            env.borrow_mut().set(bind, exprs[i].clone());
+        }
+
+        env
+    }
+
     pub fn get(env: &EnvRef, key: &str) -> Option<Atom> {
         let mut current = Rc::clone(env);
 

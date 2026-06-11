@@ -161,13 +161,8 @@ fn eval(input: Atom, env: &EnvRef) -> Result<Atom, String> {
                     body,
                     env: closed_env,
                 } => {
-                    let fn_env = Env::new(Some(Rc::clone(&closed_env)));
-                    if remaining.len() < params.len() {
-                        return Err("did not give enough arguments".to_string());
-                    }
-                    for (name, value) in params.iter().zip(remaining.iter()) {
-                        fn_env.borrow_mut().set(name, value.clone());
-                    }
+                    let fn_env =
+                        Env::new_with_binds(Some(Rc::clone(&closed_env)), &params, &remaining);
                     eval(*body.clone(), &fn_env)
                 }
                 _ => Err("first element in a list must be a function".to_string()),
