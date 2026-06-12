@@ -175,6 +175,44 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
         }),
     ));
 
+    lib.push((
+        "cons",
+        func(|atoms| {
+            let mut atoms = atoms.iter();
+            let Some(atom) = atoms.next() else {
+                return Err("cons needs an atom to prepend".to_string());
+            };
+            match atoms.next() {
+                Some(Atom::List(existing)) => {
+                    let mut new = vec![atom.clone()];
+                    new.extend(existing.iter().cloned());
+                    Ok(Atom::List(Rc::from(new)))
+                }
+                Some(Atom::Vector(existing)) => {
+                    let mut new = vec![atom.clone()];
+                    new.extend(existing.iter().cloned());
+                    Ok(Atom::Vector(Rc::from(new)))
+                }
+                _ => Err("cons needs a list or vector to prepend to".to_string()),
+            }
+        }),
+    ));
+    lib.push((
+        "concat",
+        func(|atoms| {
+            let mut new = vec![];
+            for atom in atoms {
+                if let Atom::List(list) | Atom::Vector(list) = atom {
+                    new.extend(list.iter().cloned());
+                    continue;
+                }
+
+                return Err("cons can only take lists".to_string());
+            }
+            Ok(Atom::List(Rc::from(new)))
+        }),
+    ));
+
     lib
 }
 
