@@ -1,11 +1,12 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::too_many_lines)]
 
-use std::rc::Rc;
+use std::{fs::File, io::Read, rc::Rc};
 
 use crate::{
     env::{Env, EnvRef},
     printer::print_str,
+    reader::read_str,
     types::Atom,
 };
 
@@ -112,6 +113,36 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
                 .join(" ");
             println!("{output}");
             Ok(Atom::Nil)
+        }),
+    ));
+
+    lib.push((
+        "read-string",
+        func(|atoms| {
+            if let Some(Atom::Str(str)) = atoms.first() {
+                return match read_str(str) {
+                    Ok(a) => Ok(a),
+                    Err(error) => Ok(Atom::Str(Rc::from(error.to_string()))),
+                };
+            }
+
+            Err("read-string needs a string".to_string())
+        }),
+    ));
+    lib.push((
+        "slurp",
+        func(|atoms| {
+            if let Some(Atom::Str(path)) = atoms.first() {
+                let mut contents = String::new();
+                return match File::open(path.to_string())
+                    .and_then(|mut f| f.read_to_string(&mut contents))
+                {
+                    Ok(_) => Ok(Atom::Str(Rc::from(contents))),
+                    Err(e) => Err(e.to_string()),
+                };
+            }
+
+            Err("slurp needs a string".to_string())
         }),
     ));
 
