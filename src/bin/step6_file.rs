@@ -1,6 +1,6 @@
 #![warn(clippy::pedantic)]
 
-use std::{collections::BTreeMap, rc::Rc};
+use std::{collections::BTreeMap, env::args, rc::Rc};
 
 use mal::{
     core::construct_repl_env,
@@ -197,13 +197,13 @@ fn rep(input: &str, env: &EnvRef) -> Result<String, String> {
     Ok(print(&evaluated))
 }
 
+const PRELUDE: &str = r#"
+(def! not (fn* (a) (if a false true)))
+(def! load-file (fn* (f) (eval (read-string (str "(do " (slurp f) "\nnil)")))))
+"#;
+
 fn main() {
     let repl_env = construct_repl_env();
-    let _ = rep("(def! not (fn* (a) (if a false true)))", &repl_env);
-    let _ = rep(
-        r#"(def! load-file (fn* (f) (eval (read-string (str "(do " (slurp f) "\nnil)")))))"#,
-        &repl_env,
-    );
 
     let env_reference = repl_env.clone();
     repl_env.borrow_mut().set(
@@ -240,6 +240,28 @@ fn main() {
             Ok(new)
         })),
     );
+
+    for line in PRELUDE.lines() {
+        if !line.is_empty() {
+            let _ = rep(line, &repl_env);
+        }
+    }
+
+    let args: Vec<String> = args().skip(1).collect();
+    repl_env.borrow_mut().set(
+        "*ARGV*",
+        Atom::List(Rc::from(
+            args.iter()
+                .skip(1) // skip the filename too
+                .map(|s| Atom::Str(Rc::from(s.as_str())))
+                .collect::<Vec<Atom>>(),
+        )),
+    );
+
+    if let Some(filename) = args.first() {
+        let _ = rep(&format!(r#"(load-file "{filename}")"#), &repl_env);
+        return;
+    }
 
     while let Some(ref line) = readline("user> ") {
         if !line.is_empty() {
