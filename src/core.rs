@@ -1,4 +1,5 @@
 #![warn(clippy::pedantic)]
+#![allow(clippy::too_many_lines)]
 
 use std::rc::Rc;
 
@@ -10,10 +11,10 @@ use crate::{
 
 macro_rules! two_int_op {
     ($op:literal, $f:expr) => {
-        Atom::Function(|args| match args {
+        Atom::Function(Rc::new(|args| match args {
             [Atom::Int(a), Atom::Int(b)] => Ok($f(*a, *b)),
             _ => Err(format!("improper arguments for '{}'", $op)),
-        })
+        }))
     };
 }
 
@@ -24,7 +25,7 @@ macro_rules! is_type_op {
 }
 
 fn func(f: fn(&[Atom]) -> Result<Atom, String>) -> Atom {
-    Atom::Function(f)
+    Atom::Function(Rc::new(f))
 }
 
 fn standard_library() -> Vec<(&'static str, Atom)> {

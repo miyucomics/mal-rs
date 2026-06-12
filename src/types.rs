@@ -4,7 +4,7 @@ use std::{collections::BTreeMap, rc::Rc};
 
 use crate::env::EnvRef;
 
-pub type MalFn = fn(&[Atom]) -> Result<Atom, String>;
+pub type MalFn = Rc<dyn Fn(&[Atom]) -> Result<Atom, String>>;
 
 #[derive(Clone)]
 pub enum Atom {

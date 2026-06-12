@@ -133,34 +133,34 @@ fn main() {
 
         env.set(
             "+",
-            Atom::Function(|args| match args {
+            Atom::Function(Rc::new(|args| match args {
                 [Atom::Int(a), Atom::Int(b)] => Ok(Atom::Int(a + b)),
                 _ => Err("improper arguments for '+'".to_string()),
-            }),
+            })),
         );
 
         env.set(
             "-",
-            Atom::Function(|args| match args {
+            Atom::Function(Rc::new(|args| match args {
                 [Atom::Int(a), Atom::Int(b)] => Ok(Atom::Int(a - b)),
                 _ => Err("improper arguments for '-'".to_string()),
-            }),
+            })),
         );
 
         env.set(
             "*",
-            Atom::Function(|args| match args {
+            Atom::Function(Rc::new(|args| match args {
                 [Atom::Int(a), Atom::Int(b)] => Ok(Atom::Int(a * b)),
                 _ => Err("improper arguments for '*'".to_string()),
-            }),
+            })),
         );
 
         env.set(
             "/",
-            Atom::Function(|args| match args {
+            Atom::Function(Rc::new(|args| match args {
                 [Atom::Int(a), Atom::Int(b)] => Ok(Atom::Int(a / b)),
                 _ => Err("improper arguments for '/'".to_string()),
-            }),
+            })),
         );
     }
 

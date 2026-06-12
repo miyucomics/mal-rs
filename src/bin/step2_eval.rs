@@ -81,34 +81,34 @@ fn main() {
 
     repl_env.insert(
         Rc::from("+"),
-        Atom::Function(|args| match args {
+        Atom::Function(Rc::new(|args| match args {
             [Atom::Int(a), Atom::Int(b)] => Ok(Atom::Int(a + b)),
             _ => Err("improper arguments for '+'".to_string()),
-        }),
+        })),
     );
 
     repl_env.insert(
         Rc::from("-"),
-        Atom::Function(|args| match args {
+        Atom::Function(Rc::new(|args| match args {
             [Atom::Int(a), Atom::Int(b)] => Ok(Atom::Int(a - b)),
             _ => Err("improper arguments for '-'".to_string()),
-        }),
+        })),
     );
 
     repl_env.insert(
         Rc::from("*"),
-        Atom::Function(|args| match args {
+        Atom::Function(Rc::new(|args| match args {
             [Atom::Int(a), Atom::Int(b)] => Ok(Atom::Int(a * b)),
             _ => Err("improper arguments for '*'".to_string()),
-        }),
+        })),
     );
 
     repl_env.insert(
         Rc::from("/"),
-        Atom::Function(|args| match args {
+        Atom::Function(Rc::new(|args| match args {
             [Atom::Int(a), Atom::Int(b)] => Ok(Atom::Int(a / b)),
             _ => Err("improper arguments for '/'".to_string()),
-        }),
+        })),
     );
 
     while let Some(ref line) = readline("user> ") {
