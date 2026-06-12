@@ -1,6 +1,6 @@
 #![warn(clippy::pedantic)]
 
-use std::{collections::BTreeMap, rc::Rc};
+use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
 use crate::env::EnvRef;
 
@@ -23,6 +23,7 @@ pub enum Atom {
         body: Box<Atom>,
         env: EnvRef,
     },
+    Atom(Rc<RefCell<Atom>>),
 }
 
 // so many custom implementations below because of the lambda type, and more specifically
@@ -42,6 +43,7 @@ impl Atom {
             Atom::Map(_) => 8,
             Atom::Function(_) => 9,
             Atom::Lambda { .. } => 10,
+            Atom::Atom(_) => 11,
         }
     }
 }
@@ -57,6 +59,7 @@ impl PartialEq for Atom {
             | (Atom::Symbol(a), Atom::Symbol(b)) => a == b,
             (Atom::List(a) | Atom::Vector(a), Atom::List(b) | Atom::Vector(b)) => a == b,
             (Atom::Map(a), Atom::Map(b)) => a == b,
+            (Atom::Atom(a), Atom::Atom(b)) => a == b,
 
             // functions and lambdas are never equal
             _ => false,

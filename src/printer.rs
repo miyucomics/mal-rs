@@ -58,5 +58,8 @@ pub fn print_str(atom: &Atom, print_readably: bool) -> String {
             format!("{{{contents}}}").to_string()
         }
         Atom::Function(_) | Atom::Lambda { .. } => "#<function>".to_string(),
+        Atom::Atom(contents) => {
+            format!("(atom {})", print_str(&contents.borrow().clone(), false))
+        }
     }
 }

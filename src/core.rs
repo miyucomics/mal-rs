@@ -1,7 +1,7 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::too_many_lines)]
 
-use std::{fs::File, io::Read, rc::Rc};
+use std::{cell::RefCell, fs::File, io::Read, rc::Rc};
 
 use crate::{
     env::{Env, EnvRef},
@@ -143,6 +143,35 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
             }
 
             Err("slurp needs a string".to_string())
+        }),
+    ));
+    lib.push((
+        "atom",
+        func(|atoms| {
+            let captured = atoms.first().ok_or("= needs two atoms")?;
+            Ok(Atom::Atom(Rc::new(RefCell::new(captured.clone()))))
+        }),
+    ));
+    lib.push(("atom?", func(is_type_op!(Atom::Atom(_)))));
+    lib.push((
+        "deref",
+        func(|atoms| {
+            if let Some(Atom::Atom(inner)) = atoms.first() {
+                return Ok(inner.borrow().clone());
+            }
+
+            Err("deref needs an atom".to_string())
+        }),
+    ));
+    lib.push((
+        "reset!",
+        func(|atoms| {
+            let Some(Atom::Atom(inner)) = atoms.first() else {
+                return Err("reset! needs an atom".to_string());
+            };
+            let value = atoms.get(1).ok_or("reset! needs a value to put inside")?;
+            *inner.borrow_mut() = value.clone();
+            Ok(value.clone())
         }),
     ));
 

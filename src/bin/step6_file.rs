@@ -213,6 +213,33 @@ fn main() {
             trampoline(eval_step(code, &env_reference))
         })),
     );
+    repl_env.borrow_mut().set(
+        "swap!",
+        Atom::Function(Rc::new(move |atoms| {
+            let mut atoms = atoms.iter();
+
+            let Some(Atom::Atom(inner)) = atoms.next() else {
+                return Err("swap! needs an atom".to_string());
+            };
+
+            let swapper = atoms.next().ok_or("swap! needs a function")?.clone();
+
+            let mut args = vec![inner.borrow().clone()];
+            args.extend(atoms.cloned());
+
+            let new = match swapper {
+                Atom::Function(f) => f(&args)?,
+                Atom::Lambda { params, body, env } => trampoline(eval_step(
+                    *body,
+                    &Env::new_with_binds(Some(Rc::clone(&env)), &params, &args),
+                ))?,
+                _ => return Err("swap! second argument must be a function".to_string()),
+            };
+
+            *inner.borrow_mut() = new.clone();
+            Ok(new)
+        })),
+    );
 
     while let Some(ref line) = readline("user> ") {
         if !line.is_empty() {
