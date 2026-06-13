@@ -46,6 +46,7 @@ fn eval_step(input: Atom, env: &EnvRef) -> Result<Step, String> {
                     "do" => return special_do(&atoms[1..], env),
                     "if" => return special_if(&atoms[1..], env),
                     "fn*" => return special_fn(&atoms[1..], env),
+                    "quote" => return special_quote(&atoms[1..]),
                     _ => {}
                 }
             }
@@ -185,6 +186,11 @@ fn special_fn(atoms: &[Atom], env: &EnvRef) -> Result<Step, String> {
         body: Box::new(body),
         env: Rc::clone(env),
     }))
+}
+
+fn special_quote(atoms: &[Atom]) -> Result<Step, String> {
+    let atom = atoms.first().ok_or("quote needs a parameter")?;
+    Ok(Step::Done(atom.clone()))
 }
 
 fn print(input: &Atom) -> String {
