@@ -47,6 +47,7 @@ fn eval_step(input: Atom, env: &EnvRef) -> Result<Step, String> {
                     "if" => return special_if(&atoms[1..], env),
                     "fn*" => return special_fn(&atoms[1..], env),
                     "quote" => return special_quote(&atoms[1..]),
+                    "quasiquote" => return special_quasiquote(&atoms[1..], env),
                     _ => {}
                 }
             }
@@ -189,8 +190,58 @@ fn special_fn(atoms: &[Atom], env: &EnvRef) -> Result<Step, String> {
 }
 
 fn special_quote(atoms: &[Atom]) -> Result<Step, String> {
-    let atom = atoms.first().ok_or("quote needs a parameter")?;
+    let atom = atoms.first().ok_or("quote needs an argument")?;
     Ok(Step::Done(atom.clone()))
+}
+
+fn special_quasiquote(atoms: &[Atom], env: &EnvRef) -> Result<Step, String> {
+    let ast = atoms.first().ok_or("quasiquote needs an argument")?;
+    Ok(Step::Thunk(quasiquote(ast), env.clone()))
+}
+
+fn quasiquote(ast: &Atom) -> Atom {
+    match ast {
+        Atom::List(atoms) => {
+            if let [Atom::Symbol(sym), second, ..] = atoms.as_ref()
+                && sym.as_ref() == "unquote"
+                && atoms.len() == 2
+            {
+                return second.clone();
+            }
+
+            let mut result = Atom::List(Rc::from(vec![]));
+
+            for el in atoms.iter().rev() {
+                let is_splice = matches!(el, Atom::List(inner) if matches!(inner.first(), Some(Atom::Symbol(s)) if s.as_ref() == "splice-unquote"));
+
+                // just building up a snowball
+                result = if is_splice {
+                    // the earlier match has proven that this is a list
+                    let Atom::List(inner) = el else {
+                        unreachable!()
+                    };
+
+                    Atom::List(Rc::from(vec![
+                        Atom::Symbol(Rc::from("concat")),
+                        inner[1].clone(),
+                        result,
+                    ]))
+                } else {
+                    Atom::List(Rc::from(vec![
+                        Atom::Symbol(Rc::from("cons")),
+                        quasiquote(el),
+                        result,
+                    ]))
+                }
+            }
+
+            result
+        }
+        Atom::Map(_) | Atom::Symbol(_) => {
+            Atom::List(Rc::from(vec![Atom::Symbol(Rc::from("quote")), ast.clone()]))
+        }
+        _ => ast.clone(),
+    }
 }
 
 fn print(input: &Atom) -> String {
