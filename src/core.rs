@@ -183,15 +183,10 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
                 return Err("cons needs an atom to prepend".to_string());
             };
             match atoms.next() {
-                Some(Atom::List(existing)) => {
+                Some(Atom::List(existing) | Atom::Vector(existing)) => {
                     let mut new = vec![atom.clone()];
                     new.extend(existing.iter().cloned());
                     Ok(Atom::List(Rc::from(new)))
-                }
-                Some(Atom::Vector(existing)) => {
-                    let mut new = vec![atom.clone()];
-                    new.extend(existing.iter().cloned());
-                    Ok(Atom::Vector(Rc::from(new)))
                 }
                 _ => Err("cons needs a list or vector to prepend to".to_string()),
             }
