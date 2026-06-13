@@ -208,6 +208,14 @@ fn standard_library() -> Vec<(&'static str, Atom)> {
         }),
     ));
 
+    lib.push((
+        "vec",
+        func(|atoms| match atoms.first() {
+            Some(Atom::List(inner) | Atom::Vector(inner)) => Ok(Atom::Vector(inner.clone())),
+            Some(_) | None => Err("vec needs an argument".to_string()),
+        }),
+    ));
+
     lib
 }
 
