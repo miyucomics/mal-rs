@@ -62,6 +62,7 @@ fn eval_step(input: Atom, env: &EnvRef) -> Result<Step, String> {
                     params,
                     body,
                     env: closed_env,
+                    is_macro: _,
                 } => Ok(Step::Thunk(
                     *body,
                     Env::new_with_binds(Some(Rc::clone(&closed_env)), &params, &args),
@@ -229,7 +230,12 @@ fn main() {
 
             let new = match swapper {
                 Atom::Function(f) => f(&args)?,
-                Atom::Lambda { params, body, env } => trampoline(eval_step(
+                Atom::Lambda {
+                    params,
+                    body,
+                    env,
+                    is_macro: _,
+                } => trampoline(eval_step(
                     *body,
                     &Env::new_with_binds(Some(Rc::clone(&env)), &params, &args),
                 ))?,

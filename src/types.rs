@@ -22,6 +22,7 @@ pub enum Atom {
         params: Rc<[Rc<str>]>,
         body: Box<Atom>,
         env: EnvRef,
+        is_macro: bool,
     },
     Atom(Rc<RefCell<Atom>>),
 }

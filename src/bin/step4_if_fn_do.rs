@@ -111,6 +111,7 @@ fn special_fn(atoms: &[Atom], env: &EnvRef) -> Result<Atom, String> {
             params,
             body: Box::new(body),
             env: Rc::clone(env),
+            is_macro: false,
         })
     } else {
         Err("fn* requires a parameter list".to_string())
@@ -160,6 +161,7 @@ fn eval(input: Atom, env: &EnvRef) -> Result<Atom, String> {
                     params,
                     body,
                     env: closed_env,
+                    is_macro: _,
                 } => {
                     let fn_env =
                         Env::new_with_binds(Some(Rc::clone(&closed_env)), &params, &remaining);

@@ -1,6 +1,6 @@
 #![warn(clippy::pedantic)]
 
-use std::{collections::BTreeMap, rc::Rc};
+use std::{collections::BTreeMap, env::args, rc::Rc};
 
 use mal::{
     core::construct_repl_env,
@@ -46,7 +46,25 @@ fn eval_step(input: Atom, env: &EnvRef) -> Result<Step, String> {
                     "do" => return special_do(&atoms[1..], env),
                     "if" => return special_if(&atoms[1..], env),
                     "fn*" => return special_fn(&atoms[1..], env),
-                    _ => {}
+                    "quote" => return special_quote(&atoms[1..]),
+                    "quasiquote" => return special_quasiquote(&atoms[1..], env),
+                    "defmacro!" => return special_defmacro(&atoms[1..], env),
+                    _ => {
+                        if let Some(Atom::Lambda {
+                            params,
+                            body,
+                            env: closed_env,
+                            is_macro: true,
+                        }) = Env::get(env, sym)
+                        {
+                            let expanded = trampoline(eval_step(
+                                *body,
+                                &Env::new_with_binds(Some(closed_env), &params, &atoms[1..]),
+                            ))?;
+
+                            return Ok(Step::Thunk(expanded, env.clone()));
+                        }
+                    }
                 }
             }
 
@@ -189,6 +207,102 @@ fn special_fn(atoms: &[Atom], env: &EnvRef) -> Result<Step, String> {
     }))
 }
 
+fn special_quote(atoms: &[Atom]) -> Result<Step, String> {
+    let atom = atoms.first().ok_or("quote needs an argument")?;
+    Ok(Step::Done(atom.clone()))
+}
+
+fn special_quasiquote(atoms: &[Atom], env: &EnvRef) -> Result<Step, String> {
+    let ast = atoms.first().ok_or("quasiquote needs an argument")?;
+    Ok(Step::Thunk(quasiquote(ast), env.clone()))
+}
+
+fn quasiquote(ast: &Atom) -> Atom {
+    match ast {
+        Atom::List(atoms) => {
+            if let [Atom::Symbol(sym), second, ..] = atoms.as_ref()
+                && sym.as_ref() == "unquote"
+                && atoms.len() == 2
+            {
+                return second.clone();
+            }
+
+            quasiquote_list(atoms)
+        }
+        Atom::Vector(atoms) => Atom::List(Rc::from(vec![
+            Atom::Symbol(Rc::from("vec")),
+            quasiquote_list(atoms),
+        ])),
+        Atom::Map(_) | Atom::Symbol(_) => {
+            Atom::List(Rc::from(vec![Atom::Symbol(Rc::from("quote")), ast.clone()]))
+        }
+        _ => ast.clone(),
+    }
+}
+
+fn quasiquote_list(atoms: &[Atom]) -> Atom {
+    let mut result = Atom::List(Rc::from(vec![]));
+
+    for el in atoms.iter().rev() {
+        let is_splice = matches!(el, Atom::List(inner) if matches!(inner.first(), Some(Atom::Symbol(s)) if s.as_ref() == "splice-unquote"));
+
+        // just building up a snowball
+        result = if is_splice {
+            // the earlier match has proven that this is a list
+            let Atom::List(inner) = el else {
+                unreachable!()
+            };
+
+            Atom::List(Rc::from(vec![
+                Atom::Symbol(Rc::from("concat")),
+                inner[1].clone(),
+                result,
+            ]))
+        } else {
+            Atom::List(Rc::from(vec![
+                Atom::Symbol(Rc::from("cons")),
+                quasiquote(el),
+                result,
+            ]))
+        }
+    }
+
+    result
+}
+
+fn special_defmacro(atoms: &[Atom], env: &EnvRef) -> Result<Step, String> {
+    let key = match atoms.first() {
+        Some(Atom::Symbol(s)) => s.clone(),
+        _ => return Err("defmacro! requires a symbol as first argument".to_string()),
+    };
+
+    let mut value = trampoline(eval_step(
+        atoms
+            .get(1)
+            .ok_or("defmacro! requires a value as second argument")?
+            .clone(),
+        env,
+    ))?;
+
+    if let Atom::Lambda {
+        params,
+        body,
+        env,
+        is_macro: _,
+    } = value
+    {
+        value = Atom::Lambda {
+            params,
+            body,
+            env,
+            is_macro: true,
+        };
+    }
+
+    env.borrow_mut().set(&key, value.clone());
+    Ok(Step::Done(value))
+}
+
 fn print(input: &Atom) -> String {
     print_str(input, true)
 }
@@ -199,9 +313,76 @@ fn rep(input: &str, env: &EnvRef) -> Result<String, String> {
     Ok(print(&evaluated))
 }
 
+const PRELUDE: &str = r#"
+(def! not (fn* (a) (if a false true)))
+(def! load-file (fn* (f) (eval (read-string (str "(do " (slurp f) "\nnil)")))))
+"#;
+
 fn main() {
     let repl_env = construct_repl_env();
-    let _ = rep("(def! not (fn* (a) (if a false true)))", &repl_env);
+
+    let env_reference = repl_env.clone();
+    repl_env.borrow_mut().set(
+        "eval",
+        Atom::Function(Rc::new(move |atoms| {
+            let code = atoms.first().ok_or("eval needs something to eval")?.clone();
+            trampoline(eval_step(code, &env_reference))
+        })),
+    );
+    repl_env.borrow_mut().set(
+        "swap!",
+        Atom::Function(Rc::new(move |atoms| {
+            let mut atoms = atoms.iter();
+
+            let Some(Atom::Atom(inner)) = atoms.next() else {
+                return Err("swap! needs an atom".to_string());
+            };
+
+            let swapper = atoms.next().ok_or("swap! needs a function")?.clone();
+
+            let mut args = vec![inner.borrow().clone()];
+            args.extend(atoms.cloned());
+
+            let new = match swapper {
+                Atom::Function(f) => f(&args)?,
+                Atom::Lambda {
+                    params,
+                    body,
+                    env,
+                    is_macro: _,
+                } => trampoline(eval_step(
+                    *body,
+                    &Env::new_with_binds(Some(Rc::clone(&env)), &params, &args),
+                ))?,
+                _ => return Err("swap! second argument must be a function".to_string()),
+            };
+
+            *inner.borrow_mut() = new.clone();
+            Ok(new)
+        })),
+    );
+
+    for line in PRELUDE.lines() {
+        if !line.is_empty() {
+            let _ = rep(line, &repl_env);
+        }
+    }
+
+    let args: Vec<String> = args().skip(1).collect();
+    repl_env.borrow_mut().set(
+        "*ARGV*",
+        Atom::List(Rc::from(
+            args.iter()
+                .skip(1) // skip the filename too
+                .map(|s| Atom::Str(Rc::from(s.as_str())))
+                .collect::<Vec<Atom>>(),
+        )),
+    );
+
+    if let Some(filename) = args.first() {
+        let _ = rep(&format!(r#"(load-file "{filename}")"#), &repl_env);
+        return;
+    }
 
     while let Some(ref line) = readline("user> ") {
         if !line.is_empty() {
